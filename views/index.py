@@ -1,24 +1,27 @@
+import sys
+sys.path.append('..')
 import tornado.web
-import config
-import os
-from models import students
-class IndexHandler(tornado.web.RequestHandler):
-    def get(self,num,*args,**kwargs):
-        self.write('hello'+num)
-class upfilehandler(tornado.web.RequestHandler):
+import re
+import application
+class MainHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        self.render('upfile.html')
-    def post(self, *args, **kwargs):
-        file=self.request.files
-        for input_name in file:
-            fileArr=file[input_name]
-            for fileobj in fileArr:
-                filepath=os.path.join(config.BASE_DIRS,'media/'+fileobj['filename'])
-                with open(filepath,'wb') as f:
-                    f.write(fileobj['body'])
-        self.write('ok')
-class sqlHandler(tornado.web.RequestHandler):
+        self.write('hello world')
+class UserRegisterHanlder(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        student=students(1,'ysl','18')
-        student.save()
-        self.write('ok')
+        context={}
+        email=self.get_query_argument('email',default=None)
+        password=self.get_query_argument('password')
+        password_again=self.get_query_argument('password_again')
+        if len(password)<8:
+            context['password_length_error']='密码至少8个字符'
+        if password_again!=password:
+            context['password_input error']='两次密码输入不一致'
+        else:
+            password=hash(password)
+            db=application.Application().db
+            sql='insert into user (password) values (%s)'
+            db.insert(sql,password)
+
+
+
+
