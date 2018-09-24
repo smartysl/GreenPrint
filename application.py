@@ -7,6 +7,8 @@ class Application(tornado.web.Application):
         handlers=[
             (r'/',index.MainHandler),
             (r'/user-register',index.UserRegisterHanlder),
+            (r'/user-login',index.UserLoginHandler),
+            (r'/user-uploadfile',index.UserUploadFileHandler),
         ]
         super(Application,self).__init__(handlers,**settings)
         self.db=torndb.Connection('localhost:3306','typroject',user='ysl',password='ysl123456')

@@ -1,12 +1,41 @@
 import sys
 sys.path.append('..')
 import tornado.web
-import re
 import application
 import random
+import base64
+import os
+import config
+import time
+import threading
+import tornado.ioloop
+BASE_DIR=os.path.join(config.BASE_DIRS,'media')
+def my_gencoroutine(func):
+    def wrapper(*args,**kwargs):
+        gen_func=func(*args,**kwargs)
+        gen_io=next(gen_func)
+        def run(gen):
+            res=next(gen)
+            try:
+                gen_func.send(res)
+            except StopIteration as e:
+                pass
+        threading.Thread(target=run,args=(gen_io,)).start()
+    return wrapper
+def uploadfile(file_metas):
+    for meta in file_metas:
+        file_name = meta['filename']
+        file_path = os.path.join(BASE_DIR, file_name)
+        with open(file_path, 'wb') as f:
+            f.write(meta['body'])
+    yield "ok"
 class MainHandler(tornado.web.RequestHandler):
+    def get_current_user(self):
+        user=self.get_secure_cookie('user')
+        return user
+    @tornado.web.authenticated
     def get(self, *args, **kwargs):
-        self.write('hello world')
+        self.write('hello')
 class UserRegisterHanlder(tornado.web.RequestHandler):
     def post(self, *args, **kwargs):
         context={}
@@ -18,14 +47,42 @@ class UserRegisterHanlder(tornado.web.RequestHandler):
         if password_again!=password:
             context['password_input error']='两次密码输入不一致'
         else:
-            password=hash(password)
+            password=base64.b64decode(password.encode('utf-8'))
             db=application.Application().db
             sql='insert into user (password) values (%s)'
             db.insert(sql,password)
             account=random.randint(10000000,99999999)
             sql=' insert into user_info (account,email) values (%s,%s)'
             db.insert(sql,account,email)
-            self.write('ok')
+            context['status']='200'
+        self.write(context)
+class UserLoginHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        return self.render('login.html')
+    def post(self, *args, **kwargs):
+        context={}
+        email=self.get_argument('email',default=None)
+        input_password=self.get_argument('password',default=None)
+        db=application.Application().db
+        sql="select password from user where id = (select id from user_info where email = %s)"
+        password=db.query(sql,email)
+        if input_password.encode('utf-8') == base64.b64decode(password[0]['password'].encode('utf-8')):
+            self.set_secure_cookie('user',email)
+            #context['authenticated']='200'
+            self.redirect('/')
+        else:
+            context['authenticated']='500'
+            self.write(context)
+class UserUploadFileHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        self.render('uploadfile.html')
+    @my_gencoroutine
+    def post(self, *args, **kwargs):
+        file_metas=self.request.files.get('file',None)
+        res=yield uploadfile(file_metas)
+
+
+
 
 
 

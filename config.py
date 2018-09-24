@@ -6,7 +6,8 @@ options={
 }
 settings={
     'static_path':os.path.join('static',BASE_DIRS),
-    'cookie_secret':base64.b64encode('于轼霖最帅'),
+    'cookie_secret':base64.b64encode('于轼霖最帅'.encode('utf-8')),
     'template_path':os.path.join(BASE_DIRS,'templates'),
-    'debug':True
+    'debug':True,
+    'login_url':'/user-login',
 }
