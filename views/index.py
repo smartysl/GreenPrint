@@ -6,29 +6,31 @@ import random
 import base64
 import os
 import config
-import time
 import threading
 import tornado.ioloop
+import time
 BASE_DIR=os.path.join(config.BASE_DIRS,'media')
 def my_gencoroutine(func):
     def wrapper(*args,**kwargs):
         gen_func=func(*args,**kwargs)
-        gen_io=next(gen_func)
         def run(gen):
             res=next(gen)
             try:
                 gen_func.send(res)
             except StopIteration as e:
                 pass
-        threading.Thread(target=run,args=(gen_io,)).start()
+        threading.Thread(target=run,args=(gen_func,)).start()
     return wrapper
+@my_gencoroutine
 def uploadfile(file_metas):
-    for meta in file_metas:
-        file_name = meta['filename']
-        file_path = os.path.join(BASE_DIR, file_name)
-        with open(file_path, 'wb') as f:
-            f.write(meta['body'])
-    yield "ok"
+    def run(file_metas):
+        time.sleep(30)
+        for meta in file_metas:
+            file_name = meta['filename']
+            file_path = os.path.join(BASE_DIR, file_name)
+            with open(file_path, 'wb') as f:
+                f.write(meta['body'])
+    yield run(file_metas)
 class MainHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         user=self.get_secure_cookie('user')
@@ -76,10 +78,11 @@ class UserLoginHandler(tornado.web.RequestHandler):
 class UserUploadFileHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
         self.render('uploadfile.html')
-    @my_gencoroutine
     def post(self, *args, **kwargs):
         file_metas=self.request.files.get('file',None)
-        res=yield uploadfile(file_metas)
+        uploadfile(file_metas)
+        self.write("ok")
+        self.finish()
 
 
 
