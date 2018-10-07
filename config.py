@@ -2,7 +2,7 @@ import os
 import base64
 BASE_DIRS=os.path.dirname(__file__)
 options={
-    'port':8080,
+    'port':8000,
 }
 settings={
     'static_path':os.path.join('static',BASE_DIRS),
